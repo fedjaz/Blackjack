@@ -38,6 +38,14 @@ namespace Blackjack
 
         public void NextGame()
         {
+            if(active_game.GetScore() > 21)
+            {
+                active_game.status = Game.Statuses.TooMuch;
+            }
+            else
+            {
+                active_game.status = Game.Statuses.Quit;
+            }
             if(active_game_num + 1 == games.Count)
             {
                 hasActiveGames = false;

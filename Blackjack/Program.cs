@@ -30,7 +30,7 @@ namespace Blackjack
                 int bet;
                 while (true)
                 {
-                    if (int.TryParse(Console.ReadLine(), out bet))
+                    if (int.TryParse(Console.ReadLine(), out bet) && bet > 0)
                     {
                         if(bet > player.money)
                         {
@@ -59,21 +59,23 @@ namespace Blackjack
                     {
                         game.AddCart(deck.Dequeue());
                         PrintUserInformation(player);
-                        if(game.GetScore() > 21)
+                        if(game.status == Game.Statuses.TooMuch)
                         {
-                            Console.WriteLine("Вы проиграли");
                             player.NextGame();
                         }
                     }
                     if(action == Actions.Quit)
                     {
-                        if(game.GetScore() >= 17)
-                        {
-                            Console.WriteLine("Вы выиграли!");
-                            player.money += game.bet * 2;
-                            player.NextGame();
-                        }
+                        player.NextGame();
                     }
+                    if(action == Actions.Double)
+                    {
+                        player.money -= game.bet;
+                        game.bet *= 2;
+                        game.AddCart(deck.Dequeue());
+                        player.NextGame();
+                    }
+                    
                 }
 
                 player.games = new List<Game>();
@@ -85,54 +87,62 @@ namespace Blackjack
         {
             Console.Clear();
             Console.WriteLine("Деньги: " + player.money);
-            Console.WriteLine("Рука #" + (player.active_game_num + 1) + ":");
-            for (int i = 0; i < player.active_game.cards.Count; i++)
+            for (int j = 0; j < player.games.Count; j++)
             {
-                string symbol = "";
-                Card card = player.active_game.cards[i];
-                if((int)card.face < 10)
+                Console.WriteLine("Рука #" + (j + 1) + ":");
+                Game curGame = player.games[j];
+                for (int i = 0; i < curGame.cards.Count; i++)
                 {
-                    symbol = ((int)card.face).ToString();
+                    string symbol = "";
+                    Card card = curGame.cards[i];
+                    if ((int)card.face < 10)
+                    {
+                        symbol = ((int)card.face).ToString();
+                    }
+                    else if ((int)card.face < 11)
+                    {
+                        if (card.face == Card.Faces.Jack)
+                            symbol = "J";
+                        if (card.face == Card.Faces.Queen)
+                            symbol = "Q";
+                        if (card.face == Card.Faces.King)
+                            symbol = "K";
+                    }
+                    else
+                    {
+                        symbol = "A";
+                    }
+                    Console.Write(symbol + "  ");
                 }
-                else if((int)card.face < 11)
+                Console.WriteLine();
+                for (int i = 0; i < curGame.cards.Count; i++)
                 {
-                    if (card.face == Card.Faces.Jack)
-                        symbol = "J";
-                    if (card.face == Card.Faces.Queen)
-                        symbol = "Q";
-                    if (card.face == Card.Faces.King)
-                        symbol = "K";
+                    string symbol = "";
+                    Card card = curGame.cards[i];
+                    switch (card.suit)
+                    {
+                        case Card.Suits.Diamonds:
+                            symbol = "♦";
+                            break;
+                        case Card.Suits.Clubs:
+                            symbol = "♣";
+                            break;
+                        case Card.Suits.Hearts:
+                            symbol = "♥";
+                            break;
+                        case Card.Suits.Spades:
+                            symbol = "♠";
+                            break;
+                    }
+                    Console.Write(symbol + "  ");
                 }
-                else
+                Console.WriteLine();
+                Console.WriteLine("Ваши очки: " + player.active_game.GetScore());
+                if(curGame.status == Game.Statuses.TooMuch)
                 {
-                    symbol = "A";
+                    Console.WriteLine("Перебор!");
                 }
-                Console.Write(symbol + "  ");
             }
-            Console.WriteLine();
-            for (int i = 0; i < player.active_game.cards.Count; i++)
-            {
-                string symbol = "";
-                Card card = player.active_game.cards[i];
-                switch (card.suit)
-                {
-                    case Card.Suits.Diamonds:
-                        symbol = "♦";
-                        break;
-                    case Card.Suits.Clubs:
-                        symbol = "♣";
-                        break;
-                    case Card.Suits.Hearts:
-                        symbol = "♥";
-                        break;
-                    case Card.Suits.Spades:
-                        symbol = "♠";
-                        break;
-                }
-                Console.Write(symbol + "  ");
-            }
-            Console.WriteLine();
-            Console.WriteLine("Ваши очки: " + player.active_game.GetScore());
         }
 
         static Actions GetAction(Game game)
