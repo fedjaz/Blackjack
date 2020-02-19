@@ -42,7 +42,12 @@ namespace Blackjack
             List<int> scores = new List<int>();
             foreach (Card card in cards)
             {
-                scores.Add((int)card.face);
+                int score = (int)card.face;
+                if (score != 14)
+                    score = Math.Min(score, 10);
+                else
+                    score = 11;
+                scores.Add(score);
             }
             scores.Sort();
             while(scores.Sum() > 21 && scores.Last() == 11)

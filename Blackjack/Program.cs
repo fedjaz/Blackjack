@@ -61,10 +61,10 @@ namespace Blackjack
                     {
                         game.AddCart(deck.Dequeue());
                         PrintUserInformation(player);
-                        if(game.status == Game.Statuses.TooMuch)
-                        {
-                            player.NextGame();
-                        }
+                        //if(game.status == Game.Statuses.TooMuch)
+                        //{
+                        //    player.NextGame();
+                        //}
                     }
                     if(action == Actions.Quit)
                     {
@@ -216,8 +216,10 @@ namespace Blackjack
                 {
                     symbol = ((int)card.face).ToString();
                 }
-                else if ((int)card.face < 11)
+                else if ((int)card.face < 14)
                 {
+                    if (card.face == Card.Faces.Ten)
+                        symbol = "10";
                     if (card.face == Card.Faces.Jack)
                         symbol = "J";
                     if (card.face == Card.Faces.Queen)
