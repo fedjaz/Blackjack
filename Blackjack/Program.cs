@@ -61,10 +61,10 @@ namespace Blackjack
                     {
                         game.AddCart(deck.Dequeue());
                         PrintUserInformation(player);
-                        //if(game.status == Game.Statuses.TooMuch)
-                        //{
-                        //    player.NextGame();
-                        //}
+                        if (game.status == Game.Statuses.TooMuch)
+                        {
+                            player.NextGame();
+                        }
                     }
                     if(action == Actions.Quit)
                     {
