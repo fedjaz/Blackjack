@@ -25,6 +25,7 @@ namespace Blackjack
             while (true)
             {
                 Queue<Card> deck = new Queue<Card>(Card.RandomDeck());
+                Dealer dealer = new Dealer(new List<Card>() { deck.Dequeue(), deck.Dequeue()}, player, deck);
                 Console.Clear();
                 Console.WriteLine("Ваша ставка(денег на счету: " + player.money+"): ");
                 int bet;
@@ -54,7 +55,8 @@ namespace Blackjack
                 {
                     Game game = player.active_game;
                     PrintUserInformation(player);
-                    Actions action = GetAction(game);
+                    PrintDealerInformation(dealer);
+                    Actions action = GetAction(player, game);
                     if(action == Actions.Hit)
                     {
                         game.AddCart(deck.Dequeue());
@@ -75,9 +77,53 @@ namespace Blackjack
                         game.AddCart(deck.Dequeue());
                         player.NextGame();
                     }
-                    
+                    if(action == Actions.Split)
+                    {
+                        player.NewGame(new Game(new List<Card> { game.cards[1] }));
+                        game.cards.RemoveAt(1);
+                    }
                 }
-
+                dealer.Play();
+                PrintUserInformation(player);
+                PrintDealerInformation(dealer);
+                Console.WriteLine("Итог раунда:");
+                for (int i = 0; i < player.games.Count; i++)
+                {
+                    Game game = player.games[i];
+                    int score = game.GetScore(), dealerScore = dealer.GetScore();
+                    Console.WriteLine("Рука #" + (i + 1) + ":");
+                    if(game.status == Game.Statuses.Quit && dealer.status != Game.Statuses.TooMuch)
+                    {
+                        if(score > dealerScore)
+                        {
+                            Console.WriteLine("У вас больше, вы выиграли!");
+                            player.money += game.bet * 2;
+                        }
+                        else if(score < dealerScore)
+                        {
+                            Console.WriteLine("У вас меньше, вы проиграли!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Ничья!");
+                            player.money += game.bet;
+                        }
+                    }
+                    if(game.status == Game.Statuses.Quit && dealer.status == Game.Statuses.TooMuch)
+                    {
+                        Console.WriteLine("У дилера перебор, вы выиграли!");
+                        player.money += game.bet * 2;
+                    }
+                    if (game.status == Game.Statuses.TooMuch && dealer.status == Game.Statuses.Quit)
+                    {
+                        Console.WriteLine("У вас перебор!");
+                    }
+                    if(game.status == Game.Statuses.TooMuch && dealer.status == Game.Statuses.TooMuch)
+                    {
+                        Console.WriteLine("У вас и у дилера перебор, ничья!");
+                        player.money += game.bet;
+                    }
+                }
                 player.games = new List<Game>();
                 Console.ReadKey();
             }
@@ -89,54 +135,18 @@ namespace Blackjack
             Console.WriteLine("Деньги: " + player.money);
             for (int j = 0; j < player.games.Count; j++)
             {
-                Console.WriteLine("Рука #" + (j + 1) + ":");
+                Console.Write("Рука #" + (j + 1));
+                if(j == player.active_game_num && player.HasActiveGames())
+                {
+                    Console.WriteLine("(текущая):");
+                }
+                else
+                {
+                    Console.WriteLine(":");
+                }
+                    
                 Game curGame = player.games[j];
-                for (int i = 0; i < curGame.cards.Count; i++)
-                {
-                    string symbol = "";
-                    Card card = curGame.cards[i];
-                    if ((int)card.face < 10)
-                    {
-                        symbol = ((int)card.face).ToString();
-                    }
-                    else if ((int)card.face < 11)
-                    {
-                        if (card.face == Card.Faces.Jack)
-                            symbol = "J";
-                        if (card.face == Card.Faces.Queen)
-                            symbol = "Q";
-                        if (card.face == Card.Faces.King)
-                            symbol = "K";
-                    }
-                    else
-                    {
-                        symbol = "A";
-                    }
-                    Console.Write(symbol + "  ");
-                }
-                Console.WriteLine();
-                for (int i = 0; i < curGame.cards.Count; i++)
-                {
-                    string symbol = "";
-                    Card card = curGame.cards[i];
-                    switch (card.suit)
-                    {
-                        case Card.Suits.Diamonds:
-                            symbol = "♦";
-                            break;
-                        case Card.Suits.Clubs:
-                            symbol = "♣";
-                            break;
-                        case Card.Suits.Hearts:
-                            symbol = "♥";
-                            break;
-                        case Card.Suits.Spades:
-                            symbol = "♠";
-                            break;
-                    }
-                    Console.Write(symbol + "  ");
-                }
-                Console.WriteLine();
+                PrintCards(curGame.cards, 0);
                 Console.WriteLine("Ваши очки: " + player.active_game.GetScore());
                 if(curGame.status == Game.Statuses.TooMuch)
                 {
@@ -145,7 +155,14 @@ namespace Blackjack
             }
         }
 
-        static Actions GetAction(Game game)
+        static void PrintDealerInformation(Dealer dealer)
+        {
+            Console.WriteLine("Карты дилера:");
+            PrintCards(dealer.cards, (dealer.IsHidden() ? 1 : 0));
+            Console.WriteLine("Очки дилера: " + (dealer.IsHidden() ? "x" : dealer.GetScore().ToString()));
+        }
+
+        static Actions GetAction(Player player, Game game)
         {
             Console.WriteLine("Действия");
             List<Card> cards = game.cards;
@@ -165,9 +182,18 @@ namespace Blackjack
                     Console.WriteLine("Вы ввели некорректный вариант");
                     continue;
                 }
-                if (response < 4 && response > 0)
+                if (response == 1 || response == 3)
                 {
                     return (Actions)response;
+                }
+                if(response == 2)
+                {
+                    if(player.money < game.bet)
+                    {
+                        Console.WriteLine("У вас не хватает денег!");
+                        continue;
+                    }
+                    return Actions.Double;
                 }
                 else if (response == 4 && canSplit)
                 {
@@ -178,6 +204,64 @@ namespace Blackjack
                     Console.WriteLine("Вы ввели некорректный вариант");
                 }
             }
+        }
+
+        static void PrintCards(List<Card> cards, int hidden)
+        {
+            for (int i = 0; i < cards.Count - hidden; i++)
+            {
+                string symbol = "";
+                Card card = cards[i];
+                if ((int)card.face < 10)
+                {
+                    symbol = ((int)card.face).ToString();
+                }
+                else if ((int)card.face < 11)
+                {
+                    if (card.face == Card.Faces.Jack)
+                        symbol = "J";
+                    if (card.face == Card.Faces.Queen)
+                        symbol = "Q";
+                    if (card.face == Card.Faces.King)
+                        symbol = "K";
+                }
+                else
+                {
+                    symbol = "A";
+                }
+                Console.Write(symbol + "  ");
+            }
+            for (int i = 0; i < hidden; i++)
+            {
+                Console.Write("x  ");
+            }
+            Console.WriteLine();
+            for (int i = 0; i < cards.Count - hidden; i++)
+            {
+                string symbol = "";
+                Card card = cards[i];
+                switch (card.suit)
+                {
+                    case Card.Suits.Diamonds:
+                        symbol = "♦";
+                        break;
+                    case Card.Suits.Clubs:
+                        symbol = "♣";
+                        break;
+                    case Card.Suits.Hearts:
+                        symbol = "♥";
+                        break;
+                    case Card.Suits.Spades:
+                        symbol = "♠";
+                        break;
+                }
+                Console.Write(symbol + "  ");
+            }
+            for (int i = 0; i < hidden; i++)
+            {
+                Console.Write("x  ");
+            }
+            Console.WriteLine();
         }
     }
 }

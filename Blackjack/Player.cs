@@ -28,6 +28,7 @@ namespace Blackjack
             if(games.Count == 1)
             {
                 active_game = games[0];
+                active_game_num = 0;
             }
         }
         
